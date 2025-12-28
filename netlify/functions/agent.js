@@ -46,17 +46,24 @@ export default async (req) => {
       }
     );
 
-    const data = await r.json();
-    const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+   const data = await r.json();
 
-    return new Response(JSON.stringify({ reply }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    });
-  } catch (e) {
-    return new Response(JSON.stringify({ error: String(e?.message || e) }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-    });
-  }
-};
+// Si Gemini renvoie une erreur, on la remonte au front
+if (!r.ok) {
+  return new Response(JSON.stringify({ error: "Gemini error", details: data }), {
+    status: 500,
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
+// Extraction robuste (plusieurs formats possibles)
+const reply =
+  data?.candidates?.[0]?.content?.parts?.map(p => p?.text).filter(Boolean).join("") ||
+  data?.candidates?.[0]?.content?.parts?.[0]?.text ||
+  data?.text ||
+  "";
+
+return new Response(JSON.stringify({ reply, raw: data }), {
+  status: 200,
+  headers: { "Content-Type": "application/json" },
+});
