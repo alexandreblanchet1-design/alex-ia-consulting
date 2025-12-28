@@ -1,21 +1,39 @@
 export default async (req) => {
-  const headers = {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Headers": "Content-Type",
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Content-Type": "application/json",
-  };
+  // Netlify runtime here expects a Web Response
+  if (req.method === "OPTIONS") {
+    return new Response("", {
+      status: 204,
+      headers: {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Headers": "Content-Type",
+        "Access-Control-Allow-Methods": "POST, OPTIONS",
+      },
+    });
+  }
 
-  if (req.method === "OPTIONS") return { statusCode: 204, headers, body: "" };
-  if (req.method !== "POST")
-    return { statusCode: 405, headers, body: JSON.stringify({ error: "Method Not Allowed" }) };
+  if (req.method !== "POST") {
+    return new Response(JSON.stringify({ error: "Method Not Allowed" }), {
+      status: 405,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
 
   try {
-    const { message = "" } = JSON.parse(req.body || "{}");
-    if (!message) return { statusCode: 400, headers, body: JSON.stringify({ error: "Missing message" }) };
+    const { message = "" } = await req.json();
+    if (!message) {
+      return new Response(JSON.stringify({ error: "Missing message" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
 
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) return { statusCode: 500, headers, body: JSON.stringify({ error: "Missing GEMINI_API_KEY" }) };
+    const apiKey = Netlify.env.get("GEMINI_API_KEY");
+    if (!apiKey) {
+      return new Response(JSON.stringify({ error: "Missing GEMINI_API_KEY" }), {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
 
     const r = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`,
@@ -31,9 +49,14 @@ export default async (req) => {
     const data = await r.json();
     const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
 
-    return { statusCode: 200, headers, body: JSON.stringify({ reply }) };
+    return new Response(JSON.stringify({ reply }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
   } catch (e) {
-    return { statusCode: 500, headers, body: JSON.stringify({ error: String(e?.message || e) }) };
+    return new Response(JSON.stringify({ error: String(e?.message || e) }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 };
-
