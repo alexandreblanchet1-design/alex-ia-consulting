@@ -1,0 +1,9 @@
+
+{
+  "name": "Alex IA Consulting",
+  "description": "Expert AI consulting services specifically tailored for accounting firms. Optimizing workflows, automating bookkeeping, and enhancing financial analysis through cutting-edge artificial intelligence.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
